@@ -20,6 +20,10 @@ In order to execute the support bundle you can execute the following command. Th
 ```
 kubectl support-bundle ./support-bundle.yaml
 ```
+or
+```
+kubectl support-bundle https://raw.githubusercontent.com/giantswarm/supportbundle/master/support-bundle.yaml
+```
 
 This will create a `tar.gz` file and you can explore the contents by `tar -xvf support-bundle.tar.gz`.
 
