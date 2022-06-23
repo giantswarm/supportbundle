@@ -1,0 +1,149 @@
+apiVersion: troubleshoot.sh/v1beta2
+kind: SupportBundle
+metadata:
+    name: giantswarm
+spec:
+  collectors:
+      - logs:
+          namespace: kube-system
+          selector:
+            - k8s-app=api-server
+          name: logs/api
+          limits:
+            maxAge: 24h
+            maxLines: 5000
+      - logs:
+          namespace: kube-system
+          name: logs/kubesystem
+          limits:
+            maxAge: 24h
+            maxLines: 1000
+      - logs:
+          namespace: giantswarms
+          name: logs/giantswarm
+          limits:
+            maxAge: 24h
+            maxLines: 1000
+      - runPod:
+          name: "nslookup"
+          title: "External DNS resolve check"
+          namespace: kube-system
+          podSpec: 
+            containers:
+            - name: nslookupexternal
+              image: alpine:3.16
+              command: ["nslookup"]
+              args: ["nslookup www.google.com"]
+            - name: nslookupinternal
+              image: alpine:3.16
+              command: ["nslookup"]
+              args: ["nslookup kubernetes"]
+  analyzers:
+    - deploymentStatus:
+        name: coredns
+        namespace: kube-system
+        outcomes:
+          - fail:
+              when: "< 1"
+              message: CoreDNS does not have any ready replicas.
+          - warn:
+              when: "= 1"
+              message: CoreDNS has only a single ready replica.
+          - pass:
+              message: There are multiple replicas of CoreDNS deployment ready.
+    - deploymentStatus:
+        name: cluster-autoscaler
+        namespace: kube-system
+        outcomes:
+          - fail:
+              when: "< 1"
+              message: Cluster-autoscaler does not have any ready replicas.
+          - pass:
+              message: Cluster-autoscaler is running.
+    - deploymentStatus:
+        name: external-dns
+        namespace: kube-system
+        outcomes:
+          - fail:
+              when: "< 1"
+              message: External-DNS does not have any ready replicas.
+          - pass:
+              message: External-DNS is running.
+    - deploymentStatus:
+        name: cert-manager-controller
+        namespace: kube-system
+        outcomes:
+          - fail:
+              when: "< 1"
+              message: CertManager does not have any ready replicas.
+          - pass:
+              message: CertManager is running.
+    # Check if all deployments are satisfied
+    - deploymentStatus:
+        namespace: kube-system
+    - clusterPodStatuses:
+        name: unhealthy
+        namespaces:
+          - kube-system
+          - giantswarm
+        outcomes:
+          - fail:
+              when: "!= Healthy"
+              message: Pod {{ .Namespace }}/{{ .Name }} is unhealthy with a status of {{ .Status.Reason }}.
+    - textAnalyze:
+        checkName: External DNS resolve check
+        fileName: nslookupexternal/nslookupexternal.log
+        regex: 'NXDOMAIN|connection timed out'
+        outcomes:
+          - pass:
+              when: "false"
+              message: "External DNS resolution is ok"
+          - fail:
+              when: "true"
+              message: "Problem with external DNS resolution"
+    - textAnalyze:
+        checkName: Internal DNS resolve check
+        fileName: nslookupinternal/nslookupinternal.log
+        regex: 'NXDOMAIN|connection timed out'
+        outcomes:
+          - pass:
+              when: "false"
+              message: "Internal DNS resolution is ok"
+          - fail:
+              when: "true"
+              message: "Problem with internal DNS resolution"
+    - textAnalyze:
+        checkName: Webhooks
+        fileName: logs/api/*.log
+        regex: 'failed calling webhook'
+        outcomes:
+          - pass:
+              when: "false"
+              message: "No webhooks failure detected"
+          - fail:
+              when: "true"
+              message: "Webhooks failed, check api logs"
+    - nodeResources:
+        checkName: Must have at least 3 nodes in the cluster
+        filters:
+          selector:
+              matchLabel:
+                kubernetes.io/role: worker
+        outcomes:
+          - warn:
+              when: "count() < 3"
+              message: There are less than 3 workers.
+          - pass:
+              message: This cluster has enough nodes.
+    - nodeResources:
+        checkName: Must have at least 3 nodes in the cluster
+        filters:
+          selector:
+              matchLabel:
+                kubernetes.io/role: master
+        outcomes:
+          - warn:
+              when: "count() == 1"
+              message: This cluster has a single master.
+          - pass:
+              message: This is cluster has HA control plane.

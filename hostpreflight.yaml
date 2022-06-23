@@ -1,0 +1,54 @@
+apiVersion: troubleshoot.sh/v1beta2
+kind: HostPreflight
+metadata:
+  name: giantswarm
+spec:
+  remoteCollectors:
+    - time: {}
+    - diskUsage:
+        collectorName: ephemeral
+        path: /var/lib/kubelet
+    - http:
+        collectorName: internet-connectivity
+        get:
+          url: https://raw.githubusercontent.com/giantswarm/default-catalog/master/index.yaml
+  analyzers:
+    - diskUsage:
+        collectorName: ephemeral
+        outcomes:
+          - fail:
+              when: "used/total > 90%"
+              message: /var/lib/kubelet is more than 90% full
+          - warn:
+              when: "used/total > 80%"
+              message: /var/lib/kubelet is more than 80% full
+          - pass:
+              message: /var/lib/kubelet has sufficient disk space available
+    - time:
+        outcomes:
+          - fail:
+              when: "ntp == unsynchronized+inactive"
+              message: System clock not synchronized
+          - warn:
+              when: "ntp == unsynchronized+active"
+              message: System clock not yet synchronized
+          - warn:
+              when: "ntp == synchronized+inactive"
+              message: NTP not active
+          - warn: 
+              when: "timezone != UTC"
+              message: "Non UTC timezone can interfere with system function"      
+          - pass:
+              when: "ntp == synchronized+active"
+              message: System clock is synchronized
+    - http:
+        collectorName: internet-connectivity
+        outcomes:
+          - fail:
+              when: "error"
+              message: Error downloading default catalog
+          - pass:
+              when: "statusCode == 200"
+              message: Able to download default catalog
+          - fail:
+              message: "Unexpected response"
