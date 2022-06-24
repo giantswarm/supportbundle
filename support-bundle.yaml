@@ -4,6 +4,10 @@ metadata:
     name: giantswarm
 spec:
   collectors:
+      - clusterResources:
+          namespaces:
+          - kube-system
+          - giantswarm
       - logs:
           namespace: kube-system
           selector:
