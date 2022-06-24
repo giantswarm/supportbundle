@@ -125,6 +125,39 @@ spec:
           - fail:
               when: "true"
               message: "Webhooks failed, check api logs"
+    - textAnalyze:
+        checkName: API Timeouts
+        fileName: logs/api/*.log
+        regex: 'i/o timeout'
+        outcomes:
+          - pass:
+              when: "false"
+              message: "No timeouts failure detected"
+          - fail:
+              when: "true"
+              message: "Timeouts detected in K8s API, check api logs"
+    - textAnalyze:
+        checkName: PLEG
+        fileName: logs/api/*.log
+        regex: 'PLEG is not healthy'
+        outcomes:
+          - pass:
+              when: "false"
+              message: "No PLEG failure detected"
+          - fail:
+              when: "true"
+              message: "PLEG issues found, check api logs"
+    - textAnalyze:
+        checkName: ExternalDNS InvalidChangeBatch
+        fileName: logs/kubesystem/external-dns*/external-dns.log
+        regex: 'InvalidChangeBatch'
+        outcomes:
+          - pass:
+              when: "false"
+              message: "No externalDNS InvalidChangeBatch failure detected"
+          - fail:
+              when: "true"
+              message: "ExternalDNS InvalidChangeBatch issues found, check externalDNS logs"
     - nodeResources:
         checkName: Worker Nodes
         filters:
