@@ -51,12 +51,12 @@ spec:
               message: There are multiple replicas of CoreDNS deployment ready.
     - deploymentStatus:
         name: cluster-autoscaler
-        uri: https://intranet.giantswarm.io/docs/support-and-ops/ops-recipes/cluster-autoscaler-scaling/
         namespace: kube-system
         outcomes:
           - fail:
               when: "< 1"
               message: Cluster-autoscaler does not have any ready replicas.
+              uri: https://intranet.giantswarm.io/docs/support-and-ops/ops-recipes/cluster-autoscaler-scaling/
           - pass:
               message: Cluster-autoscaler is running.
     - deploymentStatus:
