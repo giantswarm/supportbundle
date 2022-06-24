@@ -10,34 +10,36 @@ spec:
             - k8s-app=api-server
           name: logs/api
           limits:
-            maxAge: 24h
+            maxAge: 1h
             maxLines: 5000
       - logs:
           namespace: kube-system
           name: logs/kubesystem
           limits:
-            maxAge: 24h
+            maxAge: 1h
             maxLines: 1000
       - logs:
-          namespace: giantswarms
+          namespace: giantswarm
           name: logs/giantswarm
           limits:
-            maxAge: 24h
+            maxAge: 1h
             maxLines: 1000
-      - runPod:
-          name: "nslookup"
-          title: "External DNS resolve check"
+      - exec:
+          name: "nslookupexternal"
           namespace: kube-system
-          podSpec: 
-            containers:
-            - name: nslookupexternal
-              image: alpine:3.16
-              command: ["nslookup"]
-              args: ["nslookup www.google.com"]
-            - name: nslookupinternal
-              image: alpine:3.16
-              command: ["nslookup"]
-              args: ["nslookup kubernetes"]
+          selector:
+            - app.kubernetes.io/name=cert-exporter-daemonset
+          title: "External DNS resolve check"
+          command: ["nslookup"]
+          args: ["www.google.es"]
+      - exec:
+          name: "nslookupinternal"
+          namespace: kube-system
+          selector:
+            - app.kubernetes.io/name=cert-exporter-daemonset
+          title: "External DNS resolve check"
+          command: ["nslookup"]
+          args: ["kubernetes.default.svc.cluster.local"]
   analyzers:
     - deploymentStatus:
         name: coredns
@@ -92,7 +94,7 @@ spec:
               message: Pod {{ .Namespace }}/{{ .Name }} is unhealthy with a status of {{ .Status.Reason }}.
     - textAnalyze:
         checkName: External DNS resolve check
-        fileName: nslookupexternal/nslookupexternal.log
+        fileName: nslookupexternal/*/*/*.txt
         regex: 'NXDOMAIN|connection timed out'
         outcomes:
           - pass:
@@ -103,7 +105,7 @@ spec:
               message: "Problem with external DNS resolution"
     - textAnalyze:
         checkName: Internal DNS resolve check
-        fileName: nslookupinternal/nslookupinternal.log
+        fileName: nslookupinternal/*/*/*.txt
         regex: 'NXDOMAIN|connection timed out'
         outcomes:
           - pass:
@@ -124,7 +126,7 @@ spec:
               when: "true"
               message: "Webhooks failed, check api logs"
     - nodeResources:
-        checkName: Must have at least 3 nodes in the cluster
+        checkName: Worker Nodes
         filters:
           selector:
               matchLabel:
@@ -136,7 +138,7 @@ spec:
           - pass:
               message: This cluster has enough nodes.
     - nodeResources:
-        checkName: Must have at least 3 nodes in the cluster
+        checkName: Control Plane Nodes
         filters:
           selector:
               matchLabel:
