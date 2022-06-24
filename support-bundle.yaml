@@ -10,14 +10,6 @@ spec:
           - giantswarm
       - logs:
           namespace: kube-system
-          selector:
-            - k8s-app=api-server
-          name: logs/api
-          limits:
-            maxAge: 1h
-            maxLines: 5000
-      - logs:
-          namespace: kube-system
           name: logs/kubesystem
           limits:
             maxAge: 1h
@@ -59,6 +51,7 @@ spec:
               message: There are multiple replicas of CoreDNS deployment ready.
     - deploymentStatus:
         name: cluster-autoscaler
+        uri: https://intranet.giantswarm.io/docs/support-and-ops/ops-recipes/cluster-autoscaler-scaling/
         namespace: kube-system
         outcomes:
           - fail:
@@ -120,7 +113,7 @@ spec:
               message: "Problem with internal DNS resolution"
     - textAnalyze:
         checkName: Webhooks
-        fileName: logs/api/*.log
+        fileName: logs/kubesystem/k8s-api-server*.log
         regex: 'failed calling webhook'
         outcomes:
           - pass:
@@ -131,7 +124,7 @@ spec:
               message: "Webhooks failed, check api logs"
     - textAnalyze:
         checkName: API Timeouts
-        fileName: logs/api/*.log
+        fileName: logs/kubesystem/k8s-api-server*.log
         regex: 'i/o timeout'
         outcomes:
           - pass:
@@ -142,7 +135,7 @@ spec:
               message: "Timeouts detected in K8s API, check api logs"
     - textAnalyze:
         checkName: PLEG
-        fileName: logs/api/*.log
+        fileName: logs/kubesystem/k8s-api-server*.log
         regex: 'PLEG is not healthy'
         outcomes:
           - pass:

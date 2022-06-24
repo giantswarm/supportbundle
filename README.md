@@ -53,3 +53,9 @@ make collect
 
 # Additional tools
 https://github.com/replicatedhq/sbctl
+
+Local debug
+
+```
+./sbctl shell -s support-bundle-2022-06-24T13_09_08
+```
